@@ -1,4 +1,4 @@
-printf "Welcome back, great DragunWF of the Philippines...\n\n"
+printf "\nWelcome back, great DragunWF of the Philippines...\n\n"
 printf "Commands:\n- move-img\n- switch-dir <index>\n\n"
 username="dragunwf"
 
