@@ -9,14 +9,17 @@ function move-img {
 
 function switch-dir () {
     user_dir="/Users/$username"
-    repositories_dir="$user_dir/documents/devstuff/repositories"
+    repositories_dir="/$user_dir/documents/devstuff/repositories"
     unity_dir="/$user_dir/documents/devstuff/unity"
+    dump_dir="/$user_dir/documents/devstuff/dump"
     case $1 in
         "1") cd $user_dir
         ;;
         "2") cd $repositories_dir
         ;;
         "3") cd $unity_dir
+        ;;
+        "4") cd $dump_dir
         ;;
         *) echo "Index is out of range!"
     esac
