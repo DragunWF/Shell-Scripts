@@ -16,7 +16,7 @@ function switch-dir () {
         ;;
         "2") cd $repositories_dir
         ;;
-        "3" cd $unity_dir
+        "3") cd $unity_dir
         ;;
         *) echo "Index is out of range!"
     esac
