@@ -1,107 +1,143 @@
-# If you come from bash you might have to change your $PATH.
-# export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
-
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
-
-export PATH="$HOME/Library/Python/3.10/bin:$PATH"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="mikeh"
+ZSH_THEME="xiong-chiamiov-plus"
 
-# Set list of themes to pick from when loading at random
-# Setting this variable when ZSH_THEME=random will cause zsh to load
-# a theme from this variable instead of looking in $ZSH/themes/
-# If set to an empty array, this variable will have no effect.
-# ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
 
-# Uncomment the following line to use case-sensitive completion.
-# CASE_SENSITIVE="true"
+# MongoDB
+export PATH="$PATH:/Users/dragunwf/mongodb-macos-x86_64-7.0.19/bin"
 
-# Uncomment the following line to use hyphen-insensitive completion.
-# Case-sensitive completion must be off. _ and - will be interchangeable.
-# HYPHEN_INSENSITIVE="true"
-
-# Uncomment one of the following lines to change the auto-update behavior
-# zstyle ':omz:update' mode disabled  # disable automatic updates
-# zstyle ':omz:update' mode auto      # update automatically without asking
-# zstyle ':omz:update' mode reminder  # just remind me to update when it's time
-
-# Uncomment the following line to change how often to auto-update (in days).
-# zstyle ':omz:update' frequency 13
-
-# Uncomment the following line if pasting URLs and other text is messed up.
-# DISABLE_MAGIC_FUNCTIONS="true"
-
-# Uncomment the following line to disable colors in ls.
-# DISABLE_LS_COLORS="true"
-
-# Uncomment the following line to disable auto-setting terminal title.
-# DISABLE_AUTO_TITLE="true"
-
-# Uncomment the following line to enable command auto-correction.
-# ENABLE_CORRECTION="true"
-
-# Uncomment the following line to display red dots whilst waiting for completion.
-# You can also set it to another string to have that shown instead of the default red dots.
-# e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
-# Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
-# COMPLETION_WAITING_DOTS="true"
-
-# Uncomment the following line if you want to disable marking untracked files
-# under VCS as dirty. This makes repository status check for large repositories
-# much, much faster.
-# DISABLE_UNTRACKED_FILES_DIRTY="true"
-
-# Uncomment the following line if you want to change the command execution time
-# stamp shown in the history command output.
-# You can set one of the optional three formats:
-# "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
-# or set a custom format using the strftime function format specifications,
-# see 'man strftime' for details.
-# HIST_STAMPS="mm/dd/yyyy"
-
-# Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM=/path/to/new-custom-folder
-
-# Which plugins would you like to load?
-# Standard plugins can be found in $ZSH/plugins/
-# Custom plugins may be added to $ZSH_CUSTOM/plugins/
-# Example format: plugins=(rails git textmate ruby lighthouse)
-# Add wisely, as too many plugins slow down shell startup.
 plugins=(git)
 
+# Source Oh My Zsh at the beginning to ensure all ZSH features are loaded
 source $ZSH/oh-my-zsh.sh
 
-# User configuration
+# ===============================================
+# PowerShell-like functions ported to macOS/zsh
+# ===============================================
 
-# export MANPATH="/usr/local/man:$MANPATH"
+# Welcome Message
+echo "Welcome back, Dragun. Continue on your journey for self-improvement!\n"
 
-# You may need to manually set your language environment
-# export LANG=en_US.UTF-8
+# Global Variables
+SHUTDOWN_STARTED=false
 
-# Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='nvim'
-# fi
+# Data Configuration
+LOCATION_KEYS=("repo" "unity" "smartstudy" "curvera")
+LOCATION_PATHS=(
+  "$HOME/Documents/DevStuff/Repositories"
+  "$HOME/Documents/DevStuff/Unity"
+  "$HOME/Documents/DevStuff/Repositories/SmartStudy"
+  "$HOME/Documents/DevStuff/Repositories/Curvera-System"
+)
 
-# Compilation flags
-# export ARCHFLAGS="-arch $(uname -m)"
+COMMANDS=(
+  "help-profile"
+  "organize"
+  "start [-location]"
+  "dev [-location]"
+  "get-storage-status"
+  "shutdown-start [-minutes]"
+  "shutdown-cancel"
+)
 
-# Set personal aliases, overriding those provided by Oh My Zsh libs,
-# plugins, and themes. Aliases can be placed here, though Oh My Zsh
-# users are encouraged to define aliases within a top-level file in
-# the $ZSH_CUSTOM folder, with .zsh extension. Examples:
-# - $ZSH_CUSTOM/aliases.zsh
-# - $ZSH_CUSTOM/macos.zsh
-# For a full list of active aliases, run `alias`.
-#
-# Example aliases
-# alias zshconfig="mate ~/.zshrc"
-# alias ohmyzsh="mate ~/.oh-my-zsh"
-export PATH="/usr/local/bin:$PATH"
+# Function Definitions
+
+function help-profile() {
+  echo "Commands:"
+  for cmd in "${COMMANDS[@]}"; do
+    echo "- $cmd"
+  done
+
+  echo "\nLocations:"
+  # Use the array of keys instead of associative array iteration
+  for loc in "${LOCATION_KEYS[@]}"; do
+    echo "- $loc"
+  done
+
+  echo ""
+}
+
+function dev() {
+  if [[ -n $1 ]]; then
+    # Find the index of the location key
+    local found=0
+    local index=0
+    for ((i=0; i<=${#LOCATION_KEYS[@]}; i++)); do
+      if [[ "${LOCATION_KEYS[$i]}" == "$1" ]]; then
+        found=1
+        index=$i
+        break
+      fi
+    done
+    
+    if [[ $found -eq 1 ]]; then
+      cd "${LOCATION_PATHS[$index]}"
+    else
+      echo "Developer location '$1' not recognized!\n"
+    fi
+  else
+    echo "No location specified.\n"
+  fi
+}
+
+function start() {
+  if [[ -n $1 ]]; then
+    command open "$1" 
+  else
+    echo "Failed to open: No argument provided"
+  fi
+}
+
+function get-storage-status() {
+  # Adjust this for macOS - using df command instead
+  df -h
+}
+
+function shutdown-start() {
+  if [[ -z $1 ]]; then
+    echo "Error: No time specified. Please provide minutes as an argument."
+    return
+  fi
+  
+  if ! [[ $1 =~ ^[0-9]+$ ]]; then
+    echo "Error: Invalid input. Please provide a valid number."
+    return
+  fi
+  
+  if (( $1 < 0 )); then
+    echo "Error: Cannot schedule shutdown with negative time. Please provide a positive number of minutes."
+    return
+  fi
+  
+  # Schedule shutdown in macOS
+  sudo shutdown -h +$1
+  
+  if [[ $SHUTDOWN_STARTED == false ]]; then
+    SHUTDOWN_STARTED=true
+    local shutdown_time=$(date -v+${1}M +"%I:%M %p")
+    echo "Your computer will shutdown in $1 minute(s) at $shutdown_time"
+  fi
+}
+
+function shutdown-cancel() {
+  # Cancel shutdown in macOS
+  # macOS uses 'killall shutdown' instead of 'shutdown -c'
+  sudo killall shutdown
+  
+  if [[ $SHUTDOWN_STARTED == true ]]; then
+    SHUTDOWN_STARTED=false
+    echo "Computer shutdown has been cancelled!"
+  fi
+}
+
+# Run Help on Load
+help-profile
