@@ -1,19 +1,24 @@
-# Path to your Oh My Zsh installation.
+# Suppress instant prompt warning for intentional console output
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
+
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Path to Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
+
+# Path to PKG Config
+export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="xiong-chiamiov-plus"
-
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init --path)"
-eval "$(pyenv init -)"
-
-# MongoDB
-export PATH="$PATH:/Users/dragunwf/mongodb-macos-x86_64-7.0.19/bin"
+ZSH_THEME="powerlevel10k/powerlevel10k"
 
 plugins=(git)
 
@@ -24,27 +29,32 @@ source $ZSH/oh-my-zsh.sh
 # PowerShell-like functions ported to macOS/zsh
 # ===============================================
 
-# Welcome Message
-echo "Welcome back, Dragun. Continue on your journey for self-improvement!\n"
-
 # Global Variables
 SHUTDOWN_STARTED=false
 
 # Data Configuration
-LOCATION_KEYS=("repo" "unity" "smartstudy" "curvera")
+LOCATION_KEYS=(
+  "repo" 
+  "solve" 
+  "capstone" 
+  "college" 
+  "cogni"
+  "learn"
+)
 LOCATION_PATHS=(
   "$HOME/Documents/DevStuff/Repositories"
-  "$HOME/Documents/DevStuff/Unity"
-  "$HOME/Documents/DevStuff/Repositories/SmartStudy"
+  "$HOME/Documents/DevStuff/Repositories/Competitive-Programming"
   "$HOME/Documents/DevStuff/Repositories/Curvera-System"
+  "$HOME/Documents/DevStuff/Repositories/School-Work/4th-Year"
+  "$HOME/Documents/DevStuff/Repositories/CogniTrack"
+  "$HOME/Documents/DevStuff/Repositories/LearningLab"
 )
 
 COMMANDS=(
   "help-profile"
-  "organize"
-  "start [-location]"
   "dev [-location]"
-  "get-storage-status"
+  "ip"
+  "audio [device-name | list]"
   "shutdown-start [-minutes]"
   "shutdown-cancel"
 )
@@ -52,12 +62,12 @@ COMMANDS=(
 # Function Definitions
 
 function help-profile() {
-  echo "Commands:"
+  echo "Custom Commands:"
   for cmd in "${COMMANDS[@]}"; do
     echo "- $cmd"
   done
 
-  echo "\nLocations:"
+  echo "\nDev Locations:"
   # Use the array of keys instead of associative array iteration
   for loc in "${LOCATION_KEYS[@]}"; do
     echo "- $loc"
@@ -89,17 +99,8 @@ function dev() {
   fi
 }
 
-function start() {
-  if [[ -n $1 ]]; then
-    command open "$1" 
-  else
-    echo "Failed to open: No argument provided"
-  fi
-}
-
-function get-storage-status() {
-  # Adjust this for macOS - using df command instead
-  df -h
+function ip() {
+  echo "IPv4 Address: $(ipconfig getifaddr en0)"
 }
 
 function shutdown-start() {
@@ -139,5 +140,98 @@ function shutdown-cancel() {
   fi
 }
 
-# Run Help on Load
+function audio() {
+  if [[ "$1" == "list" || "$1" == "-l" || "$1" == "--list" ]]; then
+    # List all available audio output devices
+    echo "Available audio output devices:"
+    SwitchAudioSource -a -t output
+    echo "\nCurrent output device:"
+    SwitchAudioSource -c -t output
+  elif [[ -z $1 ]]; then
+    # Get current device and all available devices
+    local current=$(SwitchAudioSource -c -t output)
+    local all_devices=()
+    local devices=()
+    
+    # Read all devices into array
+    while IFS= read -r line; do
+      all_devices+=("$line")
+    done < <(SwitchAudioSource -a -t output)
+    
+    # Filter out virtual/software audio devices
+    for device in "${all_devices[@]}"; do
+      # Skip common virtual audio devices
+      if [[ "$device" != *"Microsoft Teams"* ]] && \
+         [[ "$device" != *"Zoom"* ]] && \
+         [[ "$device" != *"Slack"* ]] && \
+         [[ "$device" != *"BlackHole"* ]] && \
+         [[ "$device" != *"Loopback"* ]]; then
+        devices+=("$device")
+      fi
+    done
+    
+    # Find the index of the current device
+    local current_index=-1
+    for i in {1..${#devices[@]}}; do
+      if [[ "${devices[$i]}" == "$current" ]]; then
+        current_index=$i
+        break
+      fi
+    done
+    
+    # Calculate next index (wrap around to first device if at the end)
+    local next_index=$(( (current_index % ${#devices[@]}) + 1 ))
+    local next_device="${devices[$next_index]}"
+    
+    # Switch to next device
+    SwitchAudioSource -s "$next_device" -t output
+    if [[ $? -eq 0 ]]; then
+      echo "Switched audio output source to: $next_device"
+    else
+      echo "Error: Could not switch to next device."
+    fi
+  else
+    # Switch to the specified device
+    SwitchAudioSource -s "$1" -t output
+    if [[ $? -eq 0 ]]; then
+      echo "Switched audio output source to: $1"
+    else
+      echo "Error: Could not switch to '$1'. Use 'audio list' to see available devices."
+    fi
+  fi
+}
+
+# Set personal aliases, overriding those provided by Oh My Zsh libs,
+# plugins, and themes. Aliases can be placed here, though Oh My Zsh
+# users are encouraged to define aliases within a top-level file in
+# the $ZSH_CUSTOM folder, with .zsh extension. Examples:
+# - $ZSH_CUSTOM/aliases.zsh
+# - $ZSH_CUSTOM/macos.zsh
+# For a full list of active aliases, run `alias`.
+#
+# Example aliases
+# alias zshconfig="mate ~/.zshrc"
+# alias ohmyzsh="mate ~/.oh-my-zsh"
+
+# Aliases for Python 3
+alias python="python3"
+alias pip="pip3"
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# ===============================================
+# MOVE CONSOLE OUTPUT AFTER INSTANT PROMPT
+# ===============================================
+
+# Welcome Message - moved here to avoid instant prompt conflicts
+echo "Welcome back, Dragun. Continue on your journey for self-improvement!\n"
+
+# Run Help on Load - moved here to avoid instant prompt conflicts
 help-profile
+
+# Run neofetch for the aesthetics
+neofetch
+
+# Added by Windsurf
+export PATH="/Users/marcplarisan/.codeium/windsurf/bin:$PATH"
