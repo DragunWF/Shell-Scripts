@@ -8,8 +8,11 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-# Path to your Oh My Zsh installation.
+# Path to Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
+
+# Path to PKG Config
+export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
@@ -30,20 +33,29 @@ source $ZSH/oh-my-zsh.sh
 SHUTDOWN_STARTED=false
 
 # Data Configuration
-LOCATION_KEYS=("repo" "unity" "smartstudy" "curvera")
+LOCATION_KEYS=(
+  "repo" 
+  "solve" 
+  "capstone" 
+  "college" 
+  "book"
+  "learn"
+)
 LOCATION_PATHS=(
   "$HOME/Documents/DevStuff/Repositories"
-  "$HOME/Documents/DevStuff/Unity"
-  "$HOME/Documents/DevStuff/Repositories/SmartStudy"
+  "$HOME/Documents/DevStuff/Repositories/Competitive-Programming"
   "$HOME/Documents/DevStuff/Repositories/Curvera-System"
+  "$HOME/Documents/DevStuff/Repositories/School-Work/4th-Year"
+  "$HOME/Documents/DevStuff/Repositories/book-summary-hub"
+  "$HOME/Documents/DevStuff/Repositories/LearningLab"
 )
 
 COMMANDS=(
   "help-profile"
-  "organize"
-  "start [-location]"
   "dev [-location]"
-  "get-storage-status"
+  "ip"
+  "audio [device-name | list]"
+  "display [swap | list]"
   "shutdown-start [-minutes]"
   "shutdown-cancel"
 )
@@ -51,12 +63,12 @@ COMMANDS=(
 # Function Definitions
 
 function help-profile() {
-  echo "Commands:"
+  echo "Custom Commands:"
   for cmd in "${COMMANDS[@]}"; do
     echo "- $cmd"
   done
 
-  echo "\nLocations:"
+  echo "\nDev Locations:"
   # Use the array of keys instead of associative array iteration
   for loc in "${LOCATION_KEYS[@]}"; do
     echo "- $loc"
@@ -88,17 +100,8 @@ function dev() {
   fi
 }
 
-function start() {
-  if [[ -n $1 ]]; then
-    command open "$1" 
-  else
-    echo "Failed to open: No argument provided"
-  fi
-}
-
-function get-storage-status() {
-  # Adjust this for macOS - using df command instead
-  df -h
+function ip() {
+  echo "IPv4 Address: $(ipconfig getifaddr en0)"
 }
 
 function shutdown-start() {
@@ -138,6 +141,92 @@ function shutdown-cancel() {
   fi
 }
 
+function audio() {
+  if [[ "$1" == "list" || "$1" == "-l" || "$1" == "--list" ]]; then
+    # List all available audio output devices
+    echo "Available audio output devices:"
+    SwitchAudioSource -a -t output
+    echo "\nCurrent output device:"
+    SwitchAudioSource -c -t output
+  elif [[ -z $1 ]]; then
+    # Get current device and all available devices
+    local current=$(SwitchAudioSource -c -t output)
+    local all_devices=()
+    local devices=()
+    
+    # Read all devices into array
+    while IFS= read -r line; do
+      all_devices+=("$line")
+    done < <(SwitchAudioSource -a -t output)
+    
+    # Filter out virtual/software audio devices
+    for device in "${all_devices[@]}"; do
+      # Skip common virtual audio devices
+      if [[ "$device" != *"Microsoft Teams"* ]] && \
+         [[ "$device" != *"Zoom"* ]] && \
+         [[ "$device" != *"Slack"* ]] && \
+         [[ "$device" != *"BlackHole"* ]] && \
+         [[ "$device" != *"Loopback"* ]]; then
+        devices+=("$device")
+      fi
+    done
+    
+    # Find the index of the current device
+    local current_index=-1
+    for i in {1..${#devices[@]}}; do
+      if [[ "${devices[$i]}" == "$current" ]]; then
+        current_index=$i
+        break
+      fi
+    done
+    
+    # Calculate next index (wrap around to first device if at the end)
+    local next_index=$(( (current_index % ${#devices[@]}) + 1 ))
+    local next_device="${devices[$next_index]}"
+    
+    # Switch to next device
+    SwitchAudioSource -s "$next_device" -t output
+    if [[ $? -eq 0 ]]; then
+      echo "Switched audio output source to: $next_device"
+    else
+      echo "Error: Could not switch to next device."
+    fi
+  else
+    # Switch to the specified device
+    SwitchAudioSource -s "$1" -t output
+    if [[ $? -eq 0 ]]; then
+      echo "Switched audio output source to: $1"
+    else
+      echo "Error: Could not switch to '$1'. Use 'audio list' to see available devices."
+    fi
+  fi
+}
+
+# Display swap configs
+DISPLAY_EXTERNAL="id:63BBA0BE-9A2C-4057-829E-B090E4EB6231 res:1920x1080 hz:75 color_depth:8 enabled:true scaling:off origin:(0,0) degree:0"
+DISPLAY_MACBOOK="id:37D8832A-2D66-02CA-B9F7-8F30A301B230 res:1512x982 hz:120 color_depth:8 enabled:true scaling:on origin:(1920,43) degree:0"
+CURRENT_DISPLAY_CONFIG="A"
+
+function display() {
+  if [[ "$1" == "swap" || -z "$1" ]]; then
+    if [[ "$CURRENT_DISPLAY_CONFIG" == "A" ]]; then
+      # Swap: MacBook becomes main, external stays physically to the left
+      displayplacer "id:37D8832A-2D66-02CA-B9F7-8F30A301B230 res:1512x982 hz:120 color_depth:8 enabled:true scaling:on origin:(0,0) degree:0" "id:63BBA0BE-9A2C-4057-829E-B090E4EB6231 res:1920x1080 hz:75 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0"
+      CURRENT_DISPLAY_CONFIG="B"
+      echo "Swapped: MacBook is now the main display."
+    else
+      # Swap back: External becomes main again, MacBook to the right
+      displayplacer "id:63BBA0BE-9A2C-4057-829E-B090E4EB6231 res:1920x1080 hz:75 color_depth:8 enabled:true scaling:off origin:(0,0) degree:0" "id:37D8832A-2D66-02CA-B9F7-8F30A301B230 res:1512x982 hz:120 color_depth:8 enabled:true scaling:on origin:(1920,43) degree:0"
+      CURRENT_DISPLAY_CONFIG="A"
+      echo "Swapped: External monitor is now the main display."
+    fi
+  elif [[ "$1" == "list" || "$1" == "-l" ]]; then
+    displayplacer list
+  else
+    echo "Usage: display [swap | list]"
+  fi
+}
+
 # Set personal aliases, overriding those provided by Oh My Zsh libs,
 # plugins, and themes. Aliases can be placed here, though Oh My Zsh
 # users are encouraged to define aliases within a top-level file in
@@ -149,6 +238,10 @@ function shutdown-cancel() {
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
+
+# Aliases for Python 3
+alias python="python3"
+alias pip="pip3"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -162,3 +255,9 @@ echo "Welcome back, Dragun. Continue on your journey for self-improvement!\n"
 
 # Run Help on Load - moved here to avoid instant prompt conflicts
 help-profile
+
+# Run neofetch for the aesthetics
+neofetch
+
+# Added by Windsurf
+export PATH="/Users/marcplarisan/.codeium/windsurf/bin:$PATH"
